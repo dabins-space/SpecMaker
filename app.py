@@ -105,7 +105,14 @@ def init_session_state():
     if 'summary_max' not in st.session_state:
         st.session_state.summary_max = SUMMARY_MAX_DEFAULT
     if 'temp_dir' not in st.session_state:
-        st.session_state.temp_dir = tempfile.mkdtemp()
+        # Streamlit Cloud 호환: 현재 디렉토리 사용
+        try:
+            # 임시 디렉토리 생성 시도
+            st.session_state.temp_dir = tempfile.mkdtemp()
+        except Exception:
+            # 실패 시 현재 디렉토리의 temp 폴더 사용
+            st.session_state.temp_dir = os.path.join(os.getcwd(), 'temp')
+            os.makedirs(st.session_state.temp_dir, exist_ok=True)
 
 def try_load_openai(api_key: str = None):
     """OpenAI 클라이언트 초기화"""
@@ -113,58 +120,73 @@ def try_load_openai(api_key: str = None):
         from openai import OpenAI
         # 순서: 직접 입력 > Streamlit secrets > 직접 파일 읽기 > 환경변수
         key = None
+        
         if api_key:
             key = api_key.strip()
         else:
-            # Streamlit secrets에서 먼저 확인
+            # Streamlit Cloud/Secrets에서 먼저 확인 (가장 우선순위)
             try:
-                if hasattr(st, 'secrets'):
-                    # st.secrets는 딕셔너리처럼 접근
-                    if hasattr(st.secrets, 'get'):
-                        key = st.secrets.get('OPENAI_API_KEY', '')
-                    elif hasattr(st.secrets, '__contains__') and 'OPENAI_API_KEY' in st.secrets:
-                        key = st.secrets['OPENAI_API_KEY']
-                    elif hasattr(st.secrets, 'to_dict'):
-                        secrets_dict = st.secrets.to_dict()
-                        key = secrets_dict.get('OPENAI_API_KEY', '')
-                    
-                    if key:
-                        key = str(key).strip()
+                if hasattr(st, 'secrets') and st.secrets is not None:
+                    # Streamlit Cloud: st.secrets는 딕셔너리처럼 직접 접근 가능
+                    try:
+                        # 방법 1: 직접 딕셔너리 접근 (가장 확실)
+                        if 'OPENAI_API_KEY' in st.secrets:
+                            key = str(st.secrets['OPENAI_API_KEY']).strip()
+                    except (TypeError, AttributeError, KeyError):
+                        try:
+                            # 방법 2: get 메서드 사용
+                            key = str(st.secrets.get('OPENAI_API_KEY', '')).strip()
+                        except (TypeError, AttributeError):
+                            try:
+                                # 방법 3: to_dict() 변환 후 접근
+                                secrets_dict = st.secrets.to_dict()
+                                if secrets_dict and 'OPENAI_API_KEY' in secrets_dict:
+                                    key = str(secrets_dict['OPENAI_API_KEY']).strip()
+                            except:
+                                pass
             except Exception:
-                # secrets 파일이 없거나 접근 실패 시 무시하고 계속 진행
+                # Streamlit Cloud가 아닌 환경이면 무시하고 계속 진행
                 pass
             
-            # Streamlit secrets가 실패하면 직접 파일 읽기 시도
+            # 로컬 파일에서 확인 (.streamlit/secrets.toml)
             if not key:
                 try:
                     secrets_path = os.path.join('.streamlit', 'secrets.toml')
                     if os.path.exists(secrets_path):
                         with open(secrets_path, 'r', encoding='utf-8') as f:
                             content = f.read()
-                            # 간단한 파싱: OPENAI_API_KEY = "값"
+                            # TOML 파싱: OPENAI_API_KEY = "값"
                             match = re.search(r'OPENAI_API_KEY\s*=\s*["\']([^"\']+)["\']', content)
                             if match:
                                 key = match.group(1).strip()
                 except Exception:
-                    # 파일 읽기 실패 시 무시
                     pass
             
-            # 없으면 환경변수에서 확인
+            # 환경변수에서 확인
             if not key:
                 key = os.environ.get("OPENAI_API_KEY", "").strip()
         
-        if not key:
+        # API Key 검증
+        if not key or len(key.strip()) == 0:
             st.session_state.openai_ready = False
             st.session_state.openai_client = None
             return False
         
+        key = key.strip()
+        
+        # API Key 형식 검증 (sk-로 시작하는지 확인)
+        if not key.startswith('sk-'):
+            st.session_state.openai_ready = False
+            st.session_state.openai_client = None
+            return False
+        
+        # OpenAI 클라이언트 초기화
         st.session_state.openai_client = OpenAI(api_key=key)
         st.session_state.openai_ready = True
         return True
     except Exception as e:
         st.session_state.openai_ready = False
         st.session_state.openai_client = None
-        # 에러는 조용히 처리 (화면에 표시하지 않음)
         return False
 
 def ensure_openai_ready():
@@ -630,7 +652,18 @@ def main():
     
     # API Key 자동 로드 (Streamlit secrets > 환경변수, 화면에 표시하지 않음)
     if not st.session_state.openai_ready:
-        try_load_openai()
+        loaded = try_load_openai()
+        # 디버깅: Streamlit Cloud에서 API Key 로딩 실패 시 안내 (한 번만)
+        if not loaded and 'api_key_warning_shown' not in st.session_state:
+            st.session_state.api_key_warning_shown = True
+            # Streamlit Cloud 환경인지 확인
+            try:
+                if hasattr(st, 'secrets') and st.secrets is not None:
+                    # Secrets가 있지만 API Key가 없는 경우
+                    if 'OPENAI_API_KEY' not in st.secrets:
+                        st.warning("⚠️ Streamlit Cloud Secrets에 OPENAI_API_KEY가 설정되지 않았습니다. Settings → Secrets에서 API Key를 추가해주세요.")
+            except:
+                pass
     
     # 사이드바
     with st.sidebar:

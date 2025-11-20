@@ -771,32 +771,51 @@ def main():
             try:
                 # 텍스트 추출
                 with st.spinner("PDF 처리 중..."):
-                    st.session_state.raw_text = read_pdf_text(pdf_bytes)
+                    # PDF 텍스트 추출
+                    raw_text = read_pdf_text(pdf_bytes)
                     
-                    # 규칙 기반 필드 생성
-                    name, desc, summary, feats = rules_build_fields(
-                        pdf_bytes,
-                        st.session_state.raw_text,
-                        st.session_state.desc_max,
-                        st.session_state.summary_max,
-                        FEATURE_MAX
-                    )
-                    
-                    # 상태 설정
-                    st.session_state.var_name = name
-                    st.session_state.var_desc = desc
-                    st.session_state.var_summary = summary
-                    st.session_state.var_feats = "\n".join(feats)
-                    
-                    # 초기 상태 저장
-                    st.session_state.initial_state = get_state()
-                    st.session_state.undo_stack.clear()
+                    if not raw_text or len(raw_text.strip()) == 0:
+                        st.warning("⚠️ PDF에서 텍스트를 추출할 수 없습니다. 이미지만 포함된 PDF일 수 있습니다.")
+                        st.session_state.raw_text = ""
+                        # 빈 값으로 초기화
+                        st.session_state.var_name = ""
+                        st.session_state.var_desc = ""
+                        st.session_state.var_summary = ""
+                        st.session_state.var_feats = ""
+                    else:
+                        st.session_state.raw_text = raw_text
+                        
+                        # 규칙 기반 필드 생성
+                        name, desc, summary, feats = rules_build_fields(
+                            pdf_bytes,
+                            raw_text,
+                            st.session_state.desc_max,
+                            st.session_state.summary_max,
+                            FEATURE_MAX
+                        )
+                        
+                        # 상태 설정
+                        st.session_state.var_name = name if name else ""
+                        st.session_state.var_desc = desc if desc else ""
+                        st.session_state.var_summary = summary if summary else ""
+                        st.session_state.var_feats = "\n".join(feats) if feats else ""
+                        
+                        # 초기 상태 저장
+                        st.session_state.initial_state = get_state()
+                        st.session_state.undo_stack.clear()
                 
                 st.success(f"✅ PDF 로드 완료: {uploaded_file.name}")
+                if st.session_state.raw_text:
+                    st.info(f"📄 추출된 텍스트: {len(st.session_state.raw_text)}자")
                 st.rerun()
                 
             except Exception as e:
-                st.error(f"PDF 읽기 실패: {e}")
+                import traceback
+                error_detail = traceback.format_exc()
+                st.error(f"❌ PDF 읽기 실패: {str(e)}")
+                # 디버깅을 위해 상세 에러 표시 (Streamlit Cloud에서 확인 가능)
+                with st.expander("🔍 상세 에러 정보 (클릭하여 확인)"):
+                    st.code(error_detail, language="python")
     
     # GPT 생성 버튼들 (메인 상단)
     if st.session_state.raw_text:

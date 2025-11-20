@@ -616,15 +616,16 @@ def undo_to_initial():
     st.success("처음 상태로 복원 완료")
     return True
 
+# ================== 페이지 설정 (반드시 최상단에) ==================
+st.set_page_config(
+    page_title=APP_TITLE,
+    page_icon="📄",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # ================== 메인 앱 ==================
 def main():
-    st.set_page_config(
-        page_title=APP_TITLE,
-        page_icon="📄",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
-    
     init_session_state()
     
     # API Key 자동 로드 (Streamlit secrets > 환경변수, 화면에 표시하지 않음)

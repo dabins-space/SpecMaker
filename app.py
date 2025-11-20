@@ -804,10 +804,13 @@ def main():
                         st.session_state.initial_state = get_state()
                         st.session_state.undo_stack.clear()
                 
+                # 성공 메시지 표시 (rerun 없이 자동 업데이트)
                 st.success(f"✅ PDF 로드 완료: {uploaded_file.name}")
                 if st.session_state.raw_text:
                     st.info(f"📄 추출된 텍스트: {len(st.session_state.raw_text)}자")
-                st.rerun()
+                    # 디버깅: 세션 상태 확인
+                    st.caption(f"🔍 디버깅: 제품명={st.session_state.var_name[:50] if st.session_state.var_name else '(없음)'}...")
+                # st.rerun() 제거: 세션 상태가 업데이트되면 위젯이 자동으로 업데이트됩니다
                 
             except Exception as e:
                 import traceback
@@ -1015,7 +1018,7 @@ def main():
             value=st.session_state.var_name,
             placeholder="제품명을 입력하세요",
             label_visibility="collapsed",
-            key="name_input_field"
+            key="var_name"  # 세션 상태 키와 동일하게 설정하여 자동 동기화
         )
         
         # 제품 설명
@@ -1111,7 +1114,7 @@ def main():
             value=st.session_state.var_desc,
             height=80,
             help=f"현재: {len(st.session_state.var_desc)}자 / 최대: {st.session_state.desc_max}자",
-            key="desc_area",
+            key="var_desc",  # 세션 상태 키와 동일하게 설정하여 자동 동기화
             label_visibility="collapsed"
         )
         
@@ -1208,7 +1211,7 @@ def main():
             value=st.session_state.var_summary,
             height=120,
             help=f"현재: {len(st.session_state.var_summary)}자 / 최대: {st.session_state.summary_max}자",
-            key="summary_area",
+            key="var_summary",  # 세션 상태 키와 동일하게 설정하여 자동 동기화
             label_visibility="collapsed"
         )
         
@@ -1307,7 +1310,7 @@ def main():
             value=st.session_state.var_feats,
             height=400,
             help="각 항목은 '- '로 시작하세요",
-            key="feats_area",
+            key="var_feats",  # 세션 상태 키와 동일하게 설정하여 자동 동기화
             label_visibility="collapsed"
         )
         

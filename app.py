@@ -1013,12 +1013,14 @@ def main():
                 """
                 components.html(copy_btn_html, height=35)
         
-        st.session_state.var_name = st.text_input(
+        # key를 사용하면 반환값이 자동으로 st.session_state[key]에 저장되므로
+        # 별도로 할당하지 않습니다
+        st.text_input(
             "",
             value=st.session_state.var_name,
             placeholder="제품명을 입력하세요",
             label_visibility="collapsed",
-            key="var_name"  # 세션 상태 키와 동일하게 설정하여 자동 동기화
+            key="var_name"
         )
         
         # 제품 설명
@@ -1109,12 +1111,14 @@ def main():
                 """
                 components.html(copy_btn_html, height=35)
         
-        st.session_state.var_desc = st.text_area(
+        # key를 사용하면 반환값이 자동으로 st.session_state[key]에 저장되므로
+        # 별도로 할당하지 않습니다
+        st.text_area(
             "",
             value=st.session_state.var_desc,
             height=80,
             help=f"현재: {len(st.session_state.var_desc)}자 / 최대: {st.session_state.desc_max}자",
-            key="var_desc",  # 세션 상태 키와 동일하게 설정하여 자동 동기화
+            key="var_desc",
             label_visibility="collapsed"
         )
         
@@ -1206,12 +1210,14 @@ def main():
                 """
                 components.html(copy_btn_html, height=35)
         
-        st.session_state.var_summary = st.text_area(
+        # key를 사용하면 반환값이 자동으로 st.session_state[key]에 저장되므로
+        # 별도로 할당하지 않습니다
+        st.text_area(
             "",
             value=st.session_state.var_summary,
             height=120,
             help=f"현재: {len(st.session_state.var_summary)}자 / 최대: {st.session_state.summary_max}자",
-            key="var_summary",  # 세션 상태 키와 동일하게 설정하여 자동 동기화
+            key="var_summary",
             label_visibility="collapsed"
         )
         
@@ -1305,12 +1311,14 @@ def main():
                 """
                 components.html(copy_btn_html, height=35)
         
-        st.session_state.var_feats = st.text_area(
+        # key를 사용하면 반환값이 자동으로 st.session_state[key]에 저장되므로
+        # 별도로 할당하지 않습니다
+        st.text_area(
             "",
             value=st.session_state.var_feats,
             height=400,
             help="각 항목은 '- '로 시작하세요",
-            key="var_feats",  # 세션 상태 키와 동일하게 설정하여 자동 동기화
+            key="var_feats",
             label_visibility="collapsed"
         )
         
